@@ -1,0 +1,135 @@
+
+
+@Component
+public class JmsMessageReceiver {
+
+    private static final Logger log = LogManager.getLogger(JmsMessageReceiver.class);
+
+    private int count = 1;
+
+    @Autowired
+    private DataSource dataSource;
+
+    @JmsListener(containerFactory = "myJmsListenerContainerFactory", destination = "${jms.destinationName.mt115}")
+    public void receiveMessageMT115(Message message) throws ExportException {
+        sendExportToKafka(message, TopicMT115, "MT115");
+    }
+
+    @JmsListener(containerFactory = "myJmsListenerContainerFactory", destination = "${jms.destinationName.mt72}")
+    public void receiveMessageMT72(Message message) throws ExportException {
+        sendExportToKafka(message, TopicMT72, " MT72");
+    }
+
+    @JmsListener(containerFactory = "myJmsListenerContainerFactory", destination = "${jms.destinationName.mt113}")
+    public void receiveMessageMT113(Message message) throws ExportException {
+        sendExportToKafka(message, TopicMT113, "MT113");
+    }
+
+    @JmsListener(containerFactory = "myJmsListenerContainerFactory", destination = "${jms.destinationName.mt117}")
+    public void receiveMessageMT117(Message message) throws ExportException {
+        sendExportToKafka(message, TopicMT117, "MT117");
+    }
+
+    @JmsListener(containerFactory = "myJmsListenerContainerFactory", destination = "${jms.destinationName.mt110}")
+    public void receiveMessageMT110(Message message) throws ExportException {
+        sendExportToKafka(message, TopicMT110, "MT110");
+    }
+
+    @JmsListener(containerFactory = "myJmsListenerContainerFactory", destination = "${jms.destinationName.st3}")
+    public void receiveMessageST3(Message message) throws ExportException {
+        sendExportToKafka(message, TopicST3, "ST3");
+    }
+
+    @JmsListener(containerFactory = "myJmsListenerContainerFactory", destination = "${jms.destinationName.meterlocation}")
+    public void receiveMessageMeterLocation(Message message) throws ExportException {
+        sendExportToKafka(message, TopicMeterLocation, "meterlocation");
+    }
+
+    @JmsListener(containerFactory = "myJmsListenerContainerFactory", destination = "${jms.destinationName.device}")
+    public void receiveMessageDevice(Message message) throws ExportException {
+        sendExportToKafka(message, TopicDevice, "device");
+    }
+
+
+    @JmsListener(containerFactory = "myJmsListenerContainerFactory", destination = "${jms.destinationName.event}")
+    public void receiveMessageEvent(Message message) throws ExportException {
+        sendEventToKafka(message, TopicEvent, "Event");
+    }
+
+    private void sendExportToKafka(Message message, String topicName, String queueName) {
+        try {
+            byte[] buffer = getBytes(message);
+            String keyName = JmsMessageUtil.createExportKeyName(message);
+            kafkaTemplate.send(topicName, keyName, buffer);
+            log.debug("Completed sending message " + queueName + " to Kafka!");
+        } catch (ExportException exportException) {
+            log.error("Failed sending message " + queueName + " to Kafka!");
+        } catch (KafkaException kafkaException) {
+            log.error("Failed creating kafka producer", kafkaException);
+        }
+    }
+
+    private void sendEventToKafka(Message message, String topicName, String queueName) {
+        String messageString = JmsMessageUtil.getTextMessageContents(message);
+        String keyName = JmsMessageUtil.createEventKeyName(message, messageString);
+        kafkaEventTemplate.send(topicName, keyName, messageString);
+        log.debug("Completed sending event " + queueName + " to Kafka!");
+    }
+
+
+
+    /**
+     * Method to pull the file from the message
+     * and prepare it for sending to Kafka topic
+     */
+    private byte[] getBytes(Message message) throws ExportException {
+        count++;
+        log.debug("Count of the xml :" + count);
+        log.debug("Getting ready to send message to Kafka  ");
+
+        byte[] buffer = JmsMessageUtil.getMessageContents(message);
+        log.debug("JmsMessageUtil created buffer   ");
+
+        String name = JmsMessageUtil.getName(message, "JUNKFILENAME", false);
+        log.debug("Name of file being sent is   " + name);
+
+        return buffer;
+    }
+
+    @Autowired
+    private KafkaTemplate<String, byte[]> kafkaTemplate;
+
+    @Autowired
+    private KafkaTemplate<String, String> kafkaEventTemplate;
+
+    @Value(value = "${message.topic.name.MT115}")
+    private String TopicMT115;
+
+    @Value(value = "${message.topic.name.MT72}")
+    private String TopicMT72;
+
+    @Value(value = "${message.topic.name.MT113}")
+    private String TopicMT113;
+
+    @Value(value = "${message.topic.name.MT117}")
+    private String TopicMT117;
+
+    @Value(value = "${message.topic.name.MT110}")
+    private String TopicMT110;
+
+    @Value(value = "${message.topic.name.ST3}")
+    private String TopicST3;
+
+    @Value(value = "${message.topic.name.location}")
+    private String TopicMeterLocation;
+
+    @Value(value = "${message.topic.name.device}")
+    private String TopicDevice;
+
+
+    @Value(value = "${message.topic.name.Event}")
+    private String TopicEvent;
+
+
+
+}
